@@ -14,10 +14,10 @@ func NewDram(code []uint8) Dram {
 
 func (d *Dram) Load(addr, size uint64) (uint64, *Exception) {
 	if _, ok := map[uint64]struct{}{
-		8:  struct{}{},
-		16: struct{}{},
-		32: struct{}{},
-		64: struct{}{}}[size]; !ok {
+		8:  {},
+		16: {},
+		32: {},
+		64: {}}[size]; !ok {
 		return 0, NewException(LoadAccessFault, addr)
 	}
 	nbytes := size / 8
@@ -31,10 +31,10 @@ func (d *Dram) Load(addr, size uint64) (uint64, *Exception) {
 
 func (d *Dram) Store(addr, size, value uint64) *Exception {
 	if _, ok := map[uint64]struct{}{
-		8:  struct{}{},
-		16: struct{}{},
-		32: struct{}{},
-		64: struct{}{}}[size]; !ok {
+		8:  {},
+		16: {},
+		32: {},
+		64: {}}[size]; !ok {
 		return NewException(StoreAMOAccessFault, addr)
 	}
 	nbytes := size / 8

@@ -29,33 +29,33 @@ type Exception struct {
 func (e Exception) ToString() string {
 	switch e.Type {
 	case InstructionAddrMisaligned:
-		return fmt.Sprint("Instruction address misaligned %X", e.Store)
+		return fmt.Sprintf("Instruction address misaligned 0X%X", e.Store)
 	case InstructionAccessFault:
-		return fmt.Sprint("Instruction access fault %X", e.Store)
+		return fmt.Sprintf("Instruction access fault 0X%X", e.Store)
 	case IllegalInstruction:
-		return fmt.Sprint("Illegal instruction %X", e.Store)
+		return fmt.Sprintf("Illegal instruction 0X%X", e.Store)
 	case Breakpoint:
-		return fmt.Sprint("Breakpoint  %X", e.Store)
+		return fmt.Sprintf("Breakpoint  0X%X", e.Store)
 	case LoadAccessMisaligned:
-		return fmt.Sprint("Load access %X", e.Store)
+		return fmt.Sprintf("Load access 0X%X", e.Store)
 	case LoadAccessFault:
-		return fmt.Sprint("Load access fault %X", e.Store)
+		return fmt.Sprintf("Load access fault 0X%X", e.Store)
 	case StoreAMOAddrMisaligned:
-		return fmt.Sprint("Store or AMO address misaliged %X", e.Store)
+		return fmt.Sprintf("Store or AMO address misaliged 0X%X", e.Store)
 	case StoreAMOAccessFault:
-		return fmt.Sprint("Store or AMO access fault %X", e.Store)
+		return fmt.Sprintf("Store or AMO access fault 0X%X", e.Store)
 	case EnvironmentCallFromUMode:
-		return fmt.Sprint("Environment call from U-mode {%X", e.Store)
+		return fmt.Sprintf("Environment call from U-mode {0X%X", e.Store)
 	case EnvironmentCallFromSMode:
-		return fmt.Sprint("Environment call from S-mode {%X", e.Store)
+		return fmt.Sprintf("Environment call from S-mode {0X%X", e.Store)
 	case EnvironmentCallFromMMode:
-		return fmt.Sprint("Environment call from M-mode {%X", e.Store)
+		return fmt.Sprintf("Environment call from M-mode {0X%X", e.Store)
 	case InstructionPageFault:
-		return fmt.Sprint("Instruction page fault %X", e.Store)
+		return fmt.Sprintf("Instruction page fault 0X%X", e.Store)
 	case LoadPageFault:
-		return fmt.Sprint("Load page fault %X", e.Store)
+		return fmt.Sprintf("Load page fault 0X%X", e.Store)
 	case StoreAMOPageFault:
-		return fmt.Sprint("Store or AMO page fault %X", e.Store)
+		return fmt.Sprintf("Store or AMO page fault 0X%X", e.Store)
 	}
 	panic("Unknown Exception Type!")
 }

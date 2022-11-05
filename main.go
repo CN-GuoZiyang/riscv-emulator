@@ -25,8 +25,12 @@ func main() {
 			fmt.Println(exception.ToString())
 			break
 		}
-		cpu.Execute(inst)
-		cpu.Pc += 4
+		newPC, exception := cpu.Execute(inst)
+		if exception != nil {
+			fmt.Println(exception.ToString())
+			break
+		}
+		cpu.Pc = newPC
 	}
 	cpu.DumpRegisters()
 }
