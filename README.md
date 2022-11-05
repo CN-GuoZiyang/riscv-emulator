@@ -10,7 +10,8 @@ $ riscv64-linux-gnu-objcopy -O binary add-addi add-addi.bin
 
 run
 ```shell
-$ go run main.go add-addi.bi
+$ go buid
+$ ./riscv-emulator add-addi.bin
 ```
 
 x31(t6) should be 0x2A
