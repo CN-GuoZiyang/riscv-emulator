@@ -1,6 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
 
 type Cpu struct {
 	Regs [32]uint64
@@ -19,12 +23,37 @@ var (
 
 func NewCPU(code []uint8) *Cpu {
 	regs := [32]uint64{}
-	regs[2] = DRAM_SIZE - 1
+	regs[2] = DRAM_END
 	return &Cpu{
 		Regs: regs,
 		Pc:   DRAM_BASE,
 		Bus:  NewBus(code),
 	}
+}
+
+func (cpu *Cpu) Reg(r string) uint64 {
+	if r == "pc" {
+		return cpu.Pc
+	}
+	if r == "fp" {
+		return cpu.Reg("s0")
+	}
+	for i, abi := range RVABI {
+		if abi == r {
+			return cpu.Regs[i]
+		}
+	}
+	if strings.HasPrefix(r, "x") {
+		indexStr := r[1:]
+		index, err := strconv.ParseInt(indexStr, 10, 64)
+		if err != nil {
+			panic(fmt.Sprintf("Invalid registers: %s", r))
+		}
+		if index <= 31 {
+			return cpu.Regs[index]
+		}
+	}
+	panic(fmt.Sprintf("Invalid registers: %s", r))
 }
 
 func (cpu *Cpu) Load(addr, size uint64) (uint64, *Exception) {
@@ -45,10 +74,6 @@ func (cpu *Cpu) UpdatePC() (uint64, *Exception) {
 
 func (cpu *Cpu) Execute(inst uint64) (uint64, *Exception) {
 	opcode := inst & 0x7f
-	if opcode == 0x0 {
-		// nop
-		return cpu.UpdatePC()
-	}
 	rd := (inst >> 7) & 0x1f
 	rs1 := (inst >> 15) & 0x1f
 	rs2 := (inst >> 20) & 0x1f
@@ -181,7 +206,7 @@ func (cpu *Cpu) Execute(inst uint64) (uint64, *Exception) {
 		}
 	case 0x17:
 		// auipc
-		imm := uint64(int64(int32(inst&0xfffff000)) >> 20)
+		imm := uint64(int64(int32(inst & 0xfffff000)))
 		cpu.Regs[rd] = cpu.Pc + imm
 		return cpu.UpdatePC()
 	case 0x1b:
@@ -360,6 +385,7 @@ func (cpu *Cpu) Execute(inst uint64) (uint64, *Exception) {
 			((inst & 0x80) << 4) |
 			((inst >> 20) & 0x7e0) |
 			((inst >> 7) & 0x1e)
+		fmt.Printf("imm: %d\n", imm)
 		switch funct3 {
 		case 0x0:
 			// beq
@@ -402,9 +428,10 @@ func (cpu *Cpu) Execute(inst uint64) (uint64, *Exception) {
 		}
 	case 0x67:
 		// jalr
-		cpu.Regs[rd] = cpu.Pc + 4
+		t := cpu.Pc + 4
 		imm := uint64(int64(int32(inst&0xfff00000)) >> 20)
 		newPC := (cpu.Regs[rs1] + imm) & ^(uint64(1))
+		cpu.Regs[rd] = t
 		return newPC, nil
 	case 0x6f:
 		// jal

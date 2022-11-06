@@ -4,7 +4,7 @@ how to run:
 
 compile add-addi.s with following
 ```shell
-$ riscv64-linux-gnu-gcc -c -Wl,-Ttext=0x0 -nostdlib -march=rv64g -mno-relax -o add-addi add-addi.s
+$ clang -Wl,-Ttext=0x0 -nostdlib --target=riscv64-linux-gnu -march=rv64g -mno-relax -o add-addi _add-addi.s
 $ riscv64-linux-gnu-objcopy -O binary add-addi add-addi.bin
 ```
 
