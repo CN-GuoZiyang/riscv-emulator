@@ -10,6 +10,7 @@ type Cpu struct {
 	Regs [32]uint64
 	Pc   uint64
 	Bus  Bus
+	Csr  CSR
 }
 
 var (
@@ -28,6 +29,7 @@ func NewCPU(code []uint8) *Cpu {
 		Regs: regs,
 		Pc:   DRAM_BASE,
 		Bus:  NewBus(code),
+		Csr:  NewCSR(),
 	}
 }
 
@@ -46,12 +48,48 @@ func (cpu *Cpu) Reg(r string) uint64 {
 	if strings.HasPrefix(r, "x") {
 		indexStr := r[1:]
 		index, err := strconv.ParseInt(indexStr, 10, 64)
-		if err != nil {
-			panic(fmt.Sprintf("Invalid registers: %s", r))
-		}
-		if index <= 31 {
+		if err == nil && index <= 31 {
 			return cpu.Regs[index]
 		}
+	}
+	// csr
+	switch r {
+	case "mhartid":
+		return cpu.Csr.Load(MHARTID)
+	case "mstatus":
+		return cpu.Csr.Load(MSTATUS)
+	case "mtvec":
+		return cpu.Csr.Load(MTVEC)
+	case "mepc":
+		return cpu.Csr.Load(MEPC)
+	case "mcause":
+		return cpu.Csr.Load(MCAUSE)
+	case "mtval":
+		return cpu.Csr.Load(MTVAL)
+	case "medeleg":
+		return cpu.Csr.Load(MEDELEG)
+	case "mscratch":
+		return cpu.Csr.Load(MSCRATCH)
+	case "MIP":
+		return cpu.Csr.Load(MIP)
+	case "mcounteren":
+		return cpu.Csr.Load(MCOUNTEREN)
+	case "sstatus":
+		return cpu.Csr.Load(SSTATUS)
+	case "stvec":
+		return cpu.Csr.Load(STVEC)
+	case "sepc":
+		return cpu.Csr.Load(SEPC)
+	case "scause":
+		return cpu.Csr.Load(SCAUSE)
+	case "stval":
+		return cpu.Csr.Load(STVAL)
+	case "sscratch":
+		return cpu.Csr.Load(SSCRATCH)
+	case "SIP":
+		return cpu.Csr.Load(SIP)
+	case "SATP":
+		return cpu.Csr.Load(SATP)
 	}
 	panic(fmt.Sprintf("Invalid registers: %s", r))
 }
@@ -441,6 +479,50 @@ func (cpu *Cpu) Execute(inst uint64) (uint64, *Exception) {
 			((inst >> 9) & 0x800) |
 			((inst >> 20) & 0x7fe)
 		return cpu.Pc + imm, nil
+	case 0x73:
+		csrAddr := (inst & 0xfff00000) >> 20
+		switch funct3 {
+		case 0x1:
+			// csrrw
+			t := cpu.Csr.Load(csrAddr)
+			cpu.Csr.Store(csrAddr, cpu.Regs[rs1])
+			cpu.Regs[rd] = t
+			return cpu.UpdatePC()
+		case 0x2:
+			// csrrs
+			t := cpu.Csr.Load(csrAddr)
+			cpu.Csr.Store(csrAddr, t|cpu.Regs[rs1])
+			cpu.Regs[rd] = t
+			return cpu.UpdatePC()
+		case 0x3:
+			// csrrc
+			t := cpu.Csr.Load(csrAddr)
+			cpu.Csr.Store(csrAddr, t & ^cpu.Regs[rs1])
+			cpu.Regs[rd] = t
+			return cpu.UpdatePC()
+		case 0x5:
+			// csrrwi
+			zimm := rs1
+			cpu.Regs[rd] = cpu.Csr.Load(csrAddr)
+			cpu.Csr.Store(csrAddr, zimm)
+			return cpu.UpdatePC()
+		case 0x6:
+			// csrrsi
+			zimm := rs1
+			t := cpu.Csr.Load(csrAddr)
+			cpu.Csr.Store(csrAddr, t|zimm)
+			cpu.Regs[rd] = t
+			return cpu.UpdatePC()
+		case 0x7:
+			// csrrci
+			zimm := rs1
+			t := cpu.Csr.Load(csrAddr)
+			cpu.Csr.Store(csrAddr, t & ^zimm)
+			cpu.Regs[rd] = t
+			return cpu.UpdatePC()
+		default:
+			return 0, NewException(IllegalInstruction, inst)
+		}
 	default:
 		return 0, NewException(IllegalInstruction, inst)
 	}

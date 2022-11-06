@@ -289,3 +289,25 @@ addw a2, a0, a1`
 		{RegName: "a2", Expect: 0x7f00002a},
 	})
 }
+
+func TestCsrs1(t *testing.T) {
+	code := `addi t0, zero, 1
+addi t1, zero, 2
+addi t2, zero, 3
+csrrw zero, mstatus, t0
+csrrs zero, mtvec, t1
+csrrw zero, mepc, t2
+csrrc t2, mepc, zero
+csrrwi zero, sstatus, 4
+csrrsi zero, stvec, 5
+csrrwi zero, sepc, 6
+csrrci zero, sepc, 0 `
+	riscvTest(t, code, "test_csrs1", 20, []TestExp{
+		{RegName: "mstatus", Expect: 1},
+		{RegName: "mtvec", Expect: 2},
+		{RegName: "mepc", Expect: 3},
+		{RegName: "sstatus", Expect: 0},
+		{RegName: "stvec", Expect: 5},
+		{RegName: "sepc", Expect: 6},
+	})
+}
