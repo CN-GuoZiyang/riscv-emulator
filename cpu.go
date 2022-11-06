@@ -6,9 +6,18 @@ import (
 	"strings"
 )
 
+type Mode uint64
+
+const (
+	User       Mode = 0b00
+	Supervisor Mode = 0b01
+	Machine    Mode = 0b11
+)
+
 type Cpu struct {
 	Regs [32]uint64
 	Pc   uint64
+	Mode Mode
 	Bus  Bus
 	Csr  CSR
 }
@@ -28,6 +37,7 @@ func NewCPU(code []uint8) *Cpu {
 	return &Cpu{
 		Regs: regs,
 		Pc:   DRAM_BASE,
+		Mode: Machine,
 		Bus:  NewBus(code),
 		Csr:  NewCSR(),
 	}
@@ -408,9 +418,34 @@ func (cpu *Cpu) Execute(inst uint64) (uint64, *Exception) {
 				// srlw
 				cpu.Regs[rd] = uint64(int32(uint32(cpu.Regs[rs1]) >> shamt))
 				return cpu.UpdatePC()
+			case 0x01:
+				// divu
+				if cpu.Regs[rs2] == 0 {
+					cpu.Regs[rd] = 0xffffffffffffffff
+				} else {
+					dividend := cpu.Regs[rs1]
+					divisor := cpu.Regs[rs2]
+					cpu.Regs[rd] = dividend / divisor
+				}
+				return cpu.UpdatePC()
 			case 0x20:
 				// sraw
 				cpu.Regs[rd] = uint64(int32(cpu.Regs[rs1]) >> int32(shamt))
+				return cpu.UpdatePC()
+			default:
+				return 0, NewException(IllegalInstruction, inst)
+			}
+		case 0x7:
+			switch funct7 {
+			case 0x01:
+				// remuw
+				if cpu.Regs[rs2] == 0 {
+					cpu.Regs[rd] = cpu.Regs[rs1]
+				} else {
+					dividend := cpu.Regs[rs1]
+					divisor := cpu.Regs[rs2]
+					cpu.Regs[rd] = uint64(int32(dividend % divisor))
+				}
 				return cpu.UpdatePC()
 			default:
 				return 0, NewException(IllegalInstruction, inst)
@@ -482,6 +517,43 @@ func (cpu *Cpu) Execute(inst uint64) (uint64, *Exception) {
 	case 0x73:
 		csrAddr := (inst & 0xfff00000) >> 20
 		switch funct3 {
+		case 0x0:
+			if funct7 == 0x9 {
+				// sfence.vma
+				return cpu.UpdatePC()
+			}
+			switch rs2 {
+			case 0x2:
+				switch funct7 {
+				case 0x8:
+					// sret
+					sstatus := cpu.Csr.Load(SSTATUS)
+					cpu.Mode = Mode((sstatus & MASK_SPP) >> 8)
+					spie := (sstatus & MASK_SPIE) >> 5
+					sstatus = (sstatus & ^uint64(MASK_SIE)) | (spie << 1)
+					sstatus |= MASK_SPIE
+					sstatus &= ^uint64(MASK_SPP)
+					cpu.Csr.Store(SSTATUS, sstatus)
+					newPC := cpu.Csr.Load(SEPC) & ^uint64(0b11)
+					return newPC, nil
+				case 0x18:
+					// mret
+					mstatus := cpu.Csr.Load(MSTATUS)
+					cpu.Mode = Mode((mstatus & MASK_MPP) >> 11)
+					mpie := (mstatus & MASK_MPIE) >> 7
+					mstatus = (mstatus & ^uint64(MASK_MIE)) | (mpie << 3)
+					mstatus |= MASK_MPIE
+					mstatus &= ^uint64(MASK_MPP)
+					mstatus &= ^uint64(MASK_MPRV)
+					cpu.Csr.Store(MSTATUS, mstatus)
+					newPC := cpu.Csr.Load(MEPC) & ^uint64(0b11)
+					return newPC, nil
+				default:
+					return 0, NewException(IllegalInstruction, inst)
+				}
+			default:
+				return 0, NewException(IllegalInstruction, inst)
+			}
 		case 0x1:
 			// csrrw
 			t := cpu.Csr.Load(csrAddr)
