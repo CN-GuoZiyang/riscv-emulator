@@ -19,18 +19,25 @@ func main() {
 
 	cpu := NewCPU(code)
 
-	for cpu.Pc < DRAM_END {
+	for {
 		inst, exception := cpu.Fetch()
 		if exception != nil {
-			fmt.Println(exception.ToString())
-			break
+			cpu.HandleException(exception)
+			if exception.IsFatal() {
+				fmt.Println(exception.ToString())
+				break
+			}
+			continue
 		}
 		newPC, exception := cpu.Execute(inst)
 		if exception != nil {
-			fmt.Println(exception.ToString())
-			break
+			cpu.HandleException(exception)
+			if exception.IsFatal() {
+				fmt.Println(exception.ToString())
+				break
+			}
+			continue
 		}
 		cpu.Pc = newPC
 	}
-	cpu.DumpRegisters()
 }

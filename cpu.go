@@ -120,6 +120,35 @@ func (cpu *Cpu) UpdatePC() (uint64, *Exception) {
 	return cpu.Pc + 4, nil
 }
 
+func (cpu *Cpu) HandleException(e *Exception) {
+	pc := cpu.Pc
+	mode := cpu.Mode
+	cause := e.Code()
+	trapInSMode := mode <= Supervisor && cpu.Csr.IsMedelegated(cause)
+	var (
+		STATUS, TVEC, CAUSE, TVAL, EPC, MASK_PIE, pie_i, MASK_IE, ie_i, MASK_PP, pp_i uint64
+	)
+	if trapInSMode {
+		cpu.Mode = Supervisor
+		STATUS, TVEC, CAUSE, TVAL, EPC, MASK_PIE, pie_i, MASK_IE, ie_i, MASK_PP, pp_i =
+			SSTATUS, STVEC, SCAUSE, STVAL, SEPC, MASK_SPIE, 5, MASK_SIE, 1, MASK_SPP, 8
+	} else {
+		cpu.Mode = Machine
+		STATUS, TVEC, CAUSE, TVAL, EPC, MASK_PIE, pie_i, MASK_IE, ie_i, MASK_PP, pp_i =
+			MSTATUS, MTVEC, MCAUSE, MTVAL, MEPC, MASK_MPIE, 7, MASK_MIE, 3, MASK_MPP, 11
+	}
+	cpu.Pc = cpu.Csr.Load(TVEC) & ^uint64(0b11)
+	cpu.Csr.Store(EPC, pc)
+	cpu.Csr.Store(CAUSE, cause)
+	cpu.Csr.Store(TVAL, e.Value())
+	status := cpu.Csr.Load(STATUS)
+	ie := (status & MASK_IE) >> ie_i
+	status = (status & ^uint64(MASK_PIE)) | (ie << pie_i)
+	status &= ^uint64(MASK_IE)
+	status = (status & ^uint64(MASK_PP)) | (uint64(mode) << pp_i)
+	cpu.Csr.Store(STATUS, status)
+}
+
 func (cpu *Cpu) Execute(inst uint64) (uint64, *Exception) {
 	opcode := inst & 0x7f
 	rd := (inst >> 7) & 0x1f

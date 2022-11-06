@@ -35,3 +35,11 @@ func (c *CSR) Store(addr, value uint64) {
 		c.csrs[addr] = value
 	}
 }
+
+func (c *CSR) IsMedelegated(cause uint64) bool {
+	return ((c.csrs[MEDELEG] >> uint32(cause)) & 1) == 1
+}
+
+func (c *CSR) IsMidelegated(cause uint64) bool {
+	return ((c.csrs[MIDELEG] >> uint32(cause)) & 1) == 1
+}
