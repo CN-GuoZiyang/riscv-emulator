@@ -9,6 +9,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func generateAssembly(cFile string) {
+	cc := "clang"
+	pieces := strings.Split(cFile, ".")
+	cmd := exec.Command(cc,
+		"-S", cFile, "-nostdlib", "--target=riscv64-linux-gnu", "-march=rv64g", "-mabi=lp64", "-mno-relax",
+		"-o", "tmp/"+pieces[0]+".s")
+	err := cmd.Run()
+	if err != nil {
+		panic(err)
+	}
+}
+
 func generateObj(assemblyFile string) {
 	// cc := "riscv64-linux-gnu-gcc"
 	cc := "clang"
@@ -23,7 +35,7 @@ func generateObj(assemblyFile string) {
 }
 
 func generateBinary(objFile string) {
-	objcopy := "riscv64-linux-gnu-objcopy"
+	objcopy := "llvm-objcopy"
 	cmd := exec.Command(objcopy,
 		"-O", "binary", objFile, objFile+".bin")
 	err := cmd.Run()
@@ -310,4 +322,16 @@ csrrci zero, sepc, 0 `
 		{RegName: "stvec", Expect: 5},
 		{RegName: "sepc", Expect: 6},
 	})
+}
+
+func TestCompileUart1(t *testing.T) {
+	generateAssembly("_test_uart1.c")
+	generateObj("tmp/_test_uart1.s")
+	generateBinary("tmp/_test_uart1")
+}
+
+func TestCompileUart2(t *testing.T) {
+	generateAssembly("_test_uart2.c")
+	generateObj("tmp/_test_uart2.s")
+	generateBinary("tmp/_test_uart2")
 }

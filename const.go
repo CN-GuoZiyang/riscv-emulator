@@ -20,7 +20,7 @@ const (
 
 // PLIC
 const (
-	PLIC_BASE = 0xc00_0000
+	PLIC_BASE = 0xc000000
 	PLIC_SIZE = 0x4000000
 	PLIC_END  = PLIC_BASE + PLIC_SIZE - 1
 
@@ -28,6 +28,36 @@ const (
 	PLIC_SENABLE   = PLIC_BASE + 0x2000
 	PLIC_SPRIORITY = PLIC_BASE + 0x201000
 	PLIC_SCLAIM    = PLIC_BASE + 0x201004
+)
+
+// UART
+const (
+	UART_BASE = 0x1000_0000
+	UART_SIZE = 0x100
+	UART_END  = UART_BASE + UART_SIZE - 1
+	// uart interrupt request
+	UART_IRQ = 10
+	// Receive holding register (for input bytes).
+	UART_RHR = 0
+	// Transmit holding register (for output bytes).
+	UART_THR = 0
+	// Line control register.
+	UART_LCR = 3
+	// Line status register.
+	// LSR BIT 0:
+	//
+	//	0 = no data in receive holding register or FIFO.
+	//	1 = data has been receive and saved in the receive holding register or FIFO.
+	//
+	// LSR BIT 5:
+	//
+	//	0 = transmit holding register is full. 16550 will not accept any data for transmission.
+	//	1 = transmitter hold register (or FIFO) is empty. CPU can load the next character.
+	UART_LSR = 5
+	// The receiver (RX) bit MASK.
+	MASK_UART_LSR_RX = 1
+	// The transmitter (TX) bit MASK.
+	MASK_UART_LSR_TX = 1 << 5
 )
 
 // CSR and MASK

@@ -1,4 +1,4 @@
 add-addi
 add-addi.bin
 riscv-emulator
-tmp
+tmp/*

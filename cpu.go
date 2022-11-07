@@ -156,14 +156,14 @@ func (cpu *Cpu) Execute(inst uint64) (uint64, *Exception) {
 	rs2 := (inst >> 20) & 0x1f
 	funct3 := (inst >> 12) & 0x7
 	funct7 := (inst >> 25) & 0x7f
-	fmt.Printf("opcode: 0x%x, rd: %d, rs1: %d, rs2: %d, funct3: 0x%x, funct7: 0x%x\n", opcode, rd, rs1, rs2, funct3, funct7)
+	//fmt.Printf("opcode: 0x%x, rd: %d, rs1: %d, rs2: %d, funct3: 0x%x, funct7: 0x%x\n", opcode, rd, rs1, rs2, funct3, funct7)
 
 	cpu.Regs[0] = 0
 
 	switch opcode {
 	case 0x03:
 		// imm = inst[31:20]
-		imm := uint64(uint32(inst)) >> 20
+		imm := uint64(int64(int32(inst)) >> 20)
 		addr := cpu.Regs[rs1] + imm
 		switch funct3 {
 		case 0x0:
@@ -487,7 +487,7 @@ func (cpu *Cpu) Execute(inst uint64) (uint64, *Exception) {
 			((inst & 0x80) << 4) |
 			((inst >> 20) & 0x7e0) |
 			((inst >> 7) & 0x1e)
-		fmt.Printf("imm: %d\n", imm)
+		// fmt.Printf("imm: %d\n", imm)
 		switch funct3 {
 		case 0x0:
 			// beq
