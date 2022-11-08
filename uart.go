@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"sync"
 	"sync/atomic"
 )
@@ -20,6 +21,9 @@ func NewUart() Uart {
 	cond := sync.NewCond(&sync.Mutex{})
 	interrupt := &atomic.Bool{}
 
+	// 关闭终端缓冲
+	exec.Command("stty", "-F", "/dev/tty", "cbreak", "min", "1").Run()
+
 	go func() {
 		for {
 			func() {
@@ -29,13 +33,13 @@ func NewUart() Uart {
 					fmt.Println(err.Error())
 					return
 				}
-				_ = bs[0]
+				b := bs[0]
 				cond.L.Lock()
 				defer cond.L.Unlock()
 				for array[UART_LSR]&MASK_UART_LSR_RX == 1 {
 					cond.Wait()
 				}
-				array[UART_RHR] = 0
+				array[UART_RHR] = b
 				interrupt.Store(true)
 				array[UART_LSR] |= MASK_UART_LSR_RX
 			}()
