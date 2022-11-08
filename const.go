@@ -139,3 +139,58 @@ const (
 	MASK_SEIP = 1 << 9
 	MASK_MEIP = 1 << 11
 )
+
+// virtio
+const (
+	// The address which virtio starts.
+	VIRTIO_BASE = 0x1000_1000
+	// The size of virtio.
+	VIRTIO_SIZE = 0x1000
+	// The interrupt request of virtio.
+	VIRTIO_END = VIRTIO_BASE + VIRTIO_SIZE - 1
+	VIRTIO_IRQ = 1
+
+	// The number of virtio descriptors. It must be a power of two.
+	DESC_NUM = 8
+
+	// Always return 0x74726976.
+	VIRTIO_MAGIC = VIRTIO_BASE + 0x000
+	// The version. 1 is legacy.
+	VIRTIO_VERSION = VIRTIO_BASE + 0x004
+	// device type 1 is net, 2 is disk.
+	VIRTIO_DEVICE_ID = VIRTIO_BASE + 0x008
+	// Always return 0x554d4551
+	VIRTIO_VENDOR_ID = VIRTIO_BASE + 0x00c
+	// Device features.
+	VIRTIO_DEVICE_FEATURES = VIRTIO_BASE + 0x010
+	// Driver features.
+	VIRTIO_DRIVER_FEATURES = VIRTIO_BASE + 0x020
+	// Page size for PFN, write-only.
+	VIRTIO_GUEST_PAGE_SIZE = VIRTIO_BASE + 0x028
+	// Select queue, write-only.
+	VIRTIO_QUEUE_SEL = VIRTIO_BASE + 0x030
+	// Max size of current queue, read-only. In QEMU, `VIRTIO_COUNT = 8`.
+	VIRTIO_QUEUE_NUM_MAX = VIRTIO_BASE + 0x034
+	// Size of current queue, write-only.
+	VIRTIO_QUEUE_NUM = VIRTIO_BASE + 0x038
+	// Physical page number for queue, read and write.
+	VIRTIO_QUEUE_PFN = VIRTIO_BASE + 0x040
+	// Notify the queue number, write-only.
+	VIRTIO_QUEUE_NOTIFY = VIRTIO_BASE + 0x050
+	// Device status, read and write. Reading from this register returns the current device status flags.
+	// Writing non-zero values to this register sets the status flags, indicating the OS/driver
+	// progress. Writing zero (0x0) to this register triggers a device reset.
+	VIRTIO_STATUS = VIRTIO_BASE + 0x070
+
+	PAGE_SIZE   = 4096
+	SECTOR_SIZE = 512
+
+	// virtio block request type
+	VIRTIO_BLK_T_IN  = 0
+	VIRTIO_BLK_T_OUT = 1
+
+	// virtqueue descriptor flags
+	VIRTQ_DESC_F_NEXT     = 1
+	VIRTQ_DESC_F_WRITE    = 2
+	VIRTQ_DESC_F_INDIRECT = 4
+)

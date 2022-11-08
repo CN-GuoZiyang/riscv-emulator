@@ -73,7 +73,7 @@ func testHelper(code, testname string, n int) (*Cpu, error) {
 	if err != nil {
 		panic("read file error!")
 	}
-	cpu := NewCPU(binaryCode)
+	cpu := NewCPU(binaryCode, nil)
 	for i := 0; i < n; i++ {
 		inst, exception := cpu.Fetch()
 		if exception != nil {

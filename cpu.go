@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unsafe"
 )
 
 type Mode uint64
@@ -31,14 +32,14 @@ var (
 	}
 )
 
-func NewCPU(code []uint8) *Cpu {
+func NewCPU(code, diskImage []uint8) *Cpu {
 	regs := [32]uint64{}
 	regs[2] = DRAM_END
 	return &Cpu{
 		Regs: regs,
 		Pc:   DRAM_BASE,
 		Mode: Machine,
-		Bus:  NewBus(code),
+		Bus:  NewBus(code, diskImage),
 		Csr:  NewCSR(),
 	}
 }
@@ -674,6 +675,10 @@ func (cpu *Cpu) CheckPendingInterrupt() *Interrupt {
 	if cpu.Bus.uart.IsInterrupting() {
 		cpu.Bus.Store(PLIC_SCLAIM, 32, UART_IRQ)
 		cpu.Csr.Store(MIP, cpu.Csr.Load(MIP)|MASK_SEIP)
+	} else if cpu.Bus.virtioBlock.IsInterrupting() {
+		cpu.DiskAccess()
+		cpu.Bus.Store(PLIC_SCLAIM, 32, VIRTIO_IRQ)
+		cpu.Csr.Store(MIP, cpu.Csr.Load(MIP)|MASK_SEIP)
 	}
 	pending := cpu.Csr.Load(MIE) & cpu.Csr.Load(MIP)
 	if (pending & MASK_MEIP) != 0 {
@@ -701,6 +706,47 @@ func (cpu *Cpu) CheckPendingInterrupt() *Interrupt {
 		return &SupervisorTimerInterrupt
 	}
 	return nil
+}
+
+func (cpu *Cpu) DiskAccess() {
+	descSize := uint64(unsafe.Sizeof(VirtqDesc{}))
+	descAddr := cpu.Bus.virtioBlock.DescAddr()
+	availAddr := descAddr + DESC_NUM*descSize
+	usedAddr := descAddr + PAGE_SIZE
+
+	virtqAvail := (*VirtqAvail)(unsafe.Pointer(uintptr(availAddr)))
+	virtqUsed := (*VirtqUsed)(unsafe.Pointer(uintptr(usedAddr)))
+
+	idx, _ := cpu.Bus.Load(uint64(uintptr(unsafe.Pointer(&virtqAvail.idx))), 16)
+	index, _ := cpu.Bus.Load(uint64(uintptr(unsafe.Pointer(&virtqAvail.ring[idx%DESC_NUM]))), 16)
+
+	descAddr0 := descAddr + descSize*index
+	virtqDesc0 := (*VirtqDesc)(unsafe.Pointer(uintptr(descAddr0)))
+
+	reqAddr, _ := cpu.Bus.Load(uint64(uintptr(unsafe.Pointer(&virtqDesc0.addr))), 64)
+	virtqBlkReq := (*VirtioBlkRequest)(unsafe.Pointer(uintptr(reqAddr)))
+	blkSector, _ := cpu.Bus.Load(uint64(uintptr(unsafe.Pointer(&virtqBlkReq.sector))), 64)
+	ioType, _ := cpu.Bus.Load(uint64(uintptr(unsafe.Pointer(&virtqBlkReq.iotype))), 32)
+	next0, _ := cpu.Bus.Load(uint64(uintptr(unsafe.Pointer(&virtqDesc0.next))), 16)
+
+	descAddr1 := descAddr + descSize*next0
+	virtqDesc1 := (*VirtqDesc)(unsafe.Pointer(uintptr(descAddr1)))
+	addr1, _ := cpu.Bus.Load(uint64(uintptr(unsafe.Pointer(&virtqDesc1.addr))), 64)
+	len1, _ := cpu.Bus.Load(uint64(uintptr(unsafe.Pointer(&virtqDesc1.length))), 32)
+	switch ioType {
+	case VIRTIO_BLK_T_OUT:
+		for i := uint64(0); i < len1; i++ {
+			data, _ := cpu.Bus.Load(addr1+i, 8)
+			cpu.Bus.virtioBlock.WriteDisk(blkSector*SECTOR_SIZE+i, data)
+		}
+	case VIRTIO_BLK_T_IN:
+		for i := uint64(0); i < len1; i++ {
+			data := cpu.Bus.virtioBlock.ReadDisk(blkSector*SECTOR_SIZE + i)
+			_ = cpu.Bus.Store(addr1+i, 8, data)
+		}
+	}
+	newID := cpu.Bus.virtioBlock.GetNewID()
+	_ = cpu.Bus.Store(uint64(uintptr(unsafe.Pointer(&virtqUsed.idx))), 16, newID%8)
 }
 
 func (cpu *Cpu) DumpRegisters() {
