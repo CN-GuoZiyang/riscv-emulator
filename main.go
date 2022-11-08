@@ -36,8 +36,11 @@ func main() {
 				fmt.Println(exception.ToString())
 				break
 			}
-			continue
+		} else {
+			cpu.Pc = newPC
 		}
-		cpu.Pc = newPC
+		if interrupt := cpu.CheckPendingInterrupt(); interrupt != nil {
+			cpu.HandleInterrupt(*interrupt)
+		}
 	}
 }

@@ -629,6 +629,80 @@ func (cpu *Cpu) Execute(inst uint64) (uint64, *Exception) {
 	}
 }
 
+func (cpu *Cpu) HandleInterrupt(interrupt Interrupt) {
+	pc := cpu.Pc
+	mode := cpu.Mode
+	cause := interrupt.Code()
+	trapInSMode := mode <= Supervisor && cpu.Csr.IsMidelegated(cause)
+	var STATUS, TVEC, CAUSE, TVAL, EPC, MASK_PIE, pie_i, MASK_IE, ie_i, MASK_PP, pp_i uint64
+	if trapInSMode {
+		cpu.Mode = Supervisor
+		STATUS, TVEC, CAUSE, TVAL, EPC, MASK_PIE, pie_i, MASK_IE, ie_i, MASK_PP, pp_i =
+			SSTATUS, STVEC, SCAUSE, STVAL, SEPC, MASK_SPIE, 5, MASK_SIE, 1, MASK_SPP, 8
+	} else {
+		cpu.Mode = Machine
+		STATUS, TVEC, CAUSE, TVAL, EPC, MASK_PIE, pie_i, MASK_IE, ie_i, MASK_PP, pp_i =
+			MSTATUS, MTVEC, MCAUSE, MTVAL, MEPC, MASK_MPIE, 7, MASK_MIE, 3, MASK_MPP, 11
+	}
+	tvec := cpu.Csr.Load(TVEC)
+	tvecMode := tvec & 0b11
+	tvecBase := tvec & ^uint64(0b11)
+	switch tvecMode {
+	case 0:
+		cpu.Pc = tvecBase
+	case 1:
+		cpu.Pc = tvecBase + cause<<2
+	}
+	cpu.Csr.Store(EPC, pc)
+	cpu.Csr.Store(CAUSE, cause)
+	cpu.Csr.Store(TVAL, 0)
+	status := cpu.Csr.Load(STATUS)
+	ie := (status & MASK_IE) >> ie_i
+	status = (status & ^MASK_PIE) | (ie << pie_i)
+	status &= ^MASK_IE
+	status = (status & ^MASK_PP) | (uint64(mode) << pp_i)
+	cpu.Csr.Store(STATUS, status)
+}
+
+func (cpu *Cpu) CheckPendingInterrupt() *Interrupt {
+	if cpu.Mode == Machine && (cpu.Csr.Load(MSTATUS)&MASK_MIE) == 0 {
+		return nil
+	}
+	if cpu.Mode == Supervisor && (cpu.Csr.Load(SSTATUS)&MASK_SIE) == 0 {
+		return nil
+	}
+	if cpu.Bus.uart.IsInterrupting() {
+		cpu.Bus.Store(PLIC_SCLAIM, 32, UART_IRQ)
+		cpu.Csr.Store(MIP, cpu.Csr.Load(MIP)|MASK_SEIP)
+	}
+	pending := cpu.Csr.Load(MIE) & cpu.Csr.Load(MIP)
+	if (pending & MASK_MEIP) != 0 {
+		cpu.Csr.Store(MIP, cpu.Csr.Load(MIP) & ^uint64(MASK_MEIP))
+		return &MachineExternalInterrupt
+	}
+	if (pending & MASK_MSIP) != 0 {
+		cpu.Csr.Store(MIP, cpu.Csr.Load(MIP) & ^uint64(MASK_MSIP))
+		return &MachineSoftwareInterrupt
+	}
+	if (pending & MASK_MTIP) != 0 {
+		cpu.Csr.Store(MIP, cpu.Csr.Load(MIP) & ^uint64(MASK_MTIP))
+		return &MachineTimerInterrupt
+	}
+	if (pending & MASK_SEIP) != 0 {
+		cpu.Csr.Store(MIP, cpu.Csr.Load(MIP) & ^uint64(MASK_SEIP))
+		return &SupervisorExternalInterrupt
+	}
+	if (pending & MASK_SSIP) != 0 {
+		cpu.Csr.Store(MIP, cpu.Csr.Load(MIP) & ^uint64(MASK_SSIP))
+		return &SupervisorSoftwareInterrupt
+	}
+	if (pending & MASK_STIP) != 0 {
+		cpu.Csr.Store(MIP, cpu.Csr.Load(MIP) & ^uint64(MASK_STIP))
+		return &SupervisorTimerInterrupt
+	}
+	return nil
+}
+
 func (cpu *Cpu) DumpRegisters() {
 	fmt.Println("registers:")
 	for i := 0; i < 32; i += 4 {
