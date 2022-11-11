@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type ExceptionType uint64
 
@@ -77,6 +79,7 @@ func (e Exception) IsFatal() bool {
 }
 
 func NewException(t ExceptionType, v uint64) *Exception {
+	//debug.PrintStack()
 	return &Exception{
 		Type:  t,
 		Store: v,

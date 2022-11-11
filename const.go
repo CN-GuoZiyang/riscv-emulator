@@ -138,6 +138,8 @@ const (
 	MASK_MTIP = 1 << 7
 	MASK_SEIP = 1 << 9
 	MASK_MEIP = 1 << 11
+
+	MASK_PPN = (1 << 44) - 1
 )
 
 // virtio
