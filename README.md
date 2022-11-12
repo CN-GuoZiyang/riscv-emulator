@@ -1,17 +1,9 @@
 riscv-emulator in go
 
-how to run:
-
-compile add-addi.s with following
-```shell
-$ clang -Wl,-Ttext=0x0 -nostdlib --target=riscv64-linux-gnu -march=rv64g -mno-relax -o add-addi _add-addi.s
-$ riscv64-linux-gnu-objcopy -O binary add-addi add-addi.bin
-```
+how to run xv6 on it:
 
 run
 ```shell
 $ go buid
-$ ./riscv-emulator add-addi.bin
+$ ./riscv-emulator ./xv6-kernel.bin ./xv6-fs.img
 ```
-
-x31(t6) should be 0x2A
