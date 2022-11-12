@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"sync"
 	"sync/atomic"
 )
@@ -20,9 +19,6 @@ func NewUart() Uart {
 
 	cond := sync.NewCond(&sync.Mutex{})
 	interrupt := &atomic.Bool{}
-
-	// 关闭终端缓冲
-	exec.Command("stty", "-F", "/dev/tty", "cbreak", "min", "1").Run()
 
 	go func() {
 		for {

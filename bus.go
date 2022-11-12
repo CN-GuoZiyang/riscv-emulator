@@ -47,6 +47,5 @@ func (b *Bus) Store(addr, size, value uint64) *Exception {
 	case addr >= VIRTIO_BASE && addr <= VIRTIO_END:
 		return b.virtioBlock.Store(addr, size, value)
 	}
-	panic(addr)
 	return NewException(StoreAMOAccessFault, addr)
 }

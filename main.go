@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
@@ -26,6 +29,20 @@ func main() {
 	}
 
 	cpu := NewCPU(code, diskImage)
+
+	// 关闭终端缓冲
+	exec.Command("stty", "-F", "/dev/tty", "cbreak", "min", "1").Run()
+	// 关闭终端显示
+	exec.Command("stty", "-F", "/dev/tty", "-echo").Run()
+
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		// 恢复终端显示
+		exec.Command("stty", "-F", "/dev/tty", "echo").Run()
+		os.Exit(0)
+	}()
 
 	for {
 		inst, exception := cpu.Fetch()

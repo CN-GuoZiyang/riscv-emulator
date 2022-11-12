@@ -830,7 +830,7 @@ func (cpu *Cpu) Translate(addr uint64, accessType AccessType) (uint64, *Exceptio
 	if !cpu.EnablePaging {
 		return addr, nil
 	}
-	var levels uint64 = 3
+	levels := 3
 	vpn := []uint64{
 		(addr >> 12) & 0x1ff,
 		(addr >> 21) & 0x1ff,
