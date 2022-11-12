@@ -769,33 +769,22 @@ func (cpu *Cpu) DiskAccess() {
 	availAddr := descAddr + DESC_NUM*descSize
 	usedAddr := descAddr + PAGE_SIZE
 
-	//virtqAvail := (*VirtqAvail)(unsafe.Pointer(uintptr(availAddr)))
 	virtqAvail := VirtqAvail{}
-	// virtqUsed := (*VirtqUsed)(unsafe.Pointer(uintptr(usedAddr)))
 	virtqUsed := VirtqUsed{}
 
-	//idx, _ := cpu.Bus.Load(uint64(uintptr(unsafe.Pointer(&virtqAvail.idx))), 16)
 	idx, _ := cpu.Bus.Load(availAddr+(uint64(uintptr(unsafe.Pointer(&virtqAvail.idx)))-uint64(uintptr(unsafe.Pointer(&virtqAvail)))), 16)
-	//index, _ := cpu.Bus.Load(uint64(uintptr(unsafe.Pointer(&virtqAvail.ring[idx%DESC_NUM]))), 16)
 	index, _ := cpu.Bus.Load(availAddr+(uint64(uintptr(unsafe.Pointer(&virtqAvail.ring[idx%DESC_NUM])))-uint64(uintptr(unsafe.Pointer(&virtqAvail)))), 16)
 
 	descAddr0 := descAddr + descSize*index
-	//virtqDesc0 := (*VirtqDesc)(unsafe.Pointer(uintptr(descAddr0)))
 	virtqDesc0 := VirtqDesc{}
 
-	//reqAddr, _ := cpu.Bus.Load(uint64(uintptr(unsafe.Pointer(&virtqDesc0.addr))), 64)
 	reqAddr, _ := cpu.Bus.Load(descAddr0+(uint64(uintptr(unsafe.Pointer(&virtqDesc0.addr)))-uint64(uintptr(unsafe.Pointer(&virtqDesc0)))), 64)
-	//virtqBlkReq := (*VirtioBlkRequest)(unsafe.Pointer(uintptr(reqAddr)))
 	virtqBlkReq := VirtioBlkRequest{}
-	// blkSector, _ := cpu.Bus.Load(uint64(uintptr(unsafe.Pointer(&virtqBlkReq.sector))), 64)
-	// ioType, _ := cpu.Bus.Load(uint64(uintptr(unsafe.Pointer(&virtqBlkReq.iotype))), 32)
-	// next0, _ := cpu.Bus.Load(uint64(uintptr(unsafe.Pointer(&virtqDesc0.next))), 16)
 	blkSector, _ := cpu.Bus.Load(reqAddr+(uint64(uintptr(unsafe.Pointer(&virtqBlkReq.sector)))-uint64(uintptr(unsafe.Pointer(&virtqBlkReq)))), 64)
 	ioType, _ := cpu.Bus.Load(reqAddr+(uint64(uintptr(unsafe.Pointer(&virtqBlkReq.iotype)))-uint64(uintptr(unsafe.Pointer(&virtqBlkReq)))), 32)
 	next0, _ := cpu.Bus.Load(descAddr0+(uint64(uintptr(unsafe.Pointer(&virtqDesc0.next)))-uint64(uintptr(unsafe.Pointer(&virtqDesc0)))), 16)
 
 	descAddr1 := descAddr + descSize*next0
-	//virtqDesc1 := (*VirtqDesc)(unsafe.Pointer(uintptr(descAddr1)))
 	virtqDesc1 := VirtqDesc{}
 	addr1, _ := cpu.Bus.Load(descAddr1+(uint64(uintptr(unsafe.Pointer(&virtqDesc1.addr)))-uint64(uintptr(unsafe.Pointer(&virtqDesc1)))), 64)
 	len1, _ := cpu.Bus.Load(descAddr1+(uint64(uintptr(unsafe.Pointer(&virtqDesc1.length)))-uint64(uintptr(unsafe.Pointer(&virtqDesc1)))), 32)
@@ -813,7 +802,6 @@ func (cpu *Cpu) DiskAccess() {
 	}
 	newID := cpu.Bus.virtioBlock.GetNewID()
 	cpu.Bus.Store(usedAddr+(uint64(uintptr(unsafe.Pointer(&virtqUsed.idx)))-uint64(uintptr(unsafe.Pointer(&virtqUsed)))), 16, newID%8)
-	// _ = cpu.Bus.Store(uint64(uintptr(unsafe.Pointer(&virtqUsed.idx))), 16, newID%8)
 }
 
 func (cpu *Cpu) UpdatePaging(csrAddr uint64) {
